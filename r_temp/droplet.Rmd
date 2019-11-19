@@ -1,0 +1,274 @@
+---
+title: "Shiny Server Droplet"
+author: "Zac Garland"
+date: "11/18/2019"
+output:
+  rmarkdown::html_document:
+    theme: flatly
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, eval = F)
+```
+
+run `r puttygen`
+
+accept defaults
+
+generate
+
+
+save private key
+
+copy public key into droplet
+
+change hostname
+
+create droplet
+
+### namecheap
+
+custom DNS
+
+change nameservers to digital ocean
+
+### digital ocean
+
+add domain
+
+
+add A record @ direct to server IP
+use 300 TTL and then change after 24 hours
+
+create CNAME record * as an alias of @
+
+create CNAME record www as an alias of @
+
+### Putty
+
+add digital ocean ip address to putty
+
+port 22 
+
+ssh connection
+
+left sidebar: 
+
+SSH > Auth > browse key .ppk
+
+connection > data > auto-login username root
+
+go back to session, give it a name, save, then open
+
+```{r}
+adduser shiny
+
+gpasswd -a shiny sudo
+
+adduser zac
+
+gpasswd -a zac sudo
+
+su - zac
+
+```
+
+
+
+
+# install nginx
+
+```{r}
+sudo apt-get update
+sudo apt-get -y install nginx
+```
+
+
+# install R
+
+```{r}
+sudo sh -c 'echo "deb http://cran.rstudio.com/bin/linux/ubuntu bionic-cran35/" >> /etc/apt/sources.list'
+
+gpg --keyserver keyserver.ubuntu.com --recv-key E298A3A825C0D65DFD57CBB651716619E084DAB9
+gpg -a --export E298A3A825C0D65DFD57CBB651716619E084DAB9 | sudo apt-key add -
+
+  
+sudo apt-get update
+sudo apt-get -y install r-base  
+
+
+R
+q()
+  
+```
+
+
+add swap space
+
+```{r}
+sudo /bin/dd if=/dev/zero of=/var/swap.1 bs=1M count=1024
+sudo /sbin/mkswap /var/swap.1
+sudo /sbin/swapon /var/swap.1
+sudo sh -c 'echo "/var/swap.1 swap swap defaults 0 0 " >> /etc/fstab'
+```
+
+
+install devtools
+
+```{r}
+sudo apt-get -y install libcurl4-gnutls-dev libxml2-dev libssl-dev
+sudo su - -c "R -e \"install.packages('devtools', repos='http://cran.rstudio.com/')\""
+```
+
+
+
+install R Studio Server
+
+check which version of Ubuntu
+
+https://rstudio.com/products/rstudio/download-server/debian-ubuntu/
+
+```{r}
+
+lsb_release -a
+
+```
+
+
+```{r}
+sudo apt-get install gdebi-core
+wget https://download2.rstudio.org/server/bionic/amd64/rstudio-server-1.2.5019-amd64.deb
+sudo gdebi rstudio-server-1.2.5019-amd64.deb
+```
+
+
+
+install shiny sever
+
+```{r}
+sudo su - -c "R -e \"install.packages('shiny', repos='http://cran.rstudio.com/')\""
+sudo su - -c "R -e \"install.packages('rmarkdown', repos='http://cran.rstudio.com/')\""
+
+wget https://download3.rstudio.org/ubuntu-14.04/x86_64/shiny-server-1.5.12.933-amd64.deb
+sudo gdebi shiny-server-1.5.12.933-amd64.deb
+```
+
+
+add permissions
+
+```{r}
+sudo groupadd shiny-apps
+sudo usermod -aG shiny-apps zac
+sudo usermod -aG shiny-apps shiny
+cd /srv/shiny-server
+sudo chown -R zac:shiny-apps .
+sudo chmod g+w .
+sudo chmod g+s .
+```
+
+
+
+install git and tell it who you are
+
+```{r}
+sudo apt-get -y install git
+git config --global user.email "zachary.garland@outlook.com"
+git config --global user.name "zac-garland"
+
+cd /srv/shiny-server
+git init
+
+
+```
+
+
+
+go to github and create new repo
+
+
+```{r}
+git remote add origin https://github.com/zac-garland/shiny-server.git
+git add .
+git commit -m "Initial commit"
+git push -u origin master
+```
+
+
+
+
+#nginx config
+
+make a backup
+```{r}
+cd
+
+sudo cp /etc/nginx/sites-enabled/default /etc/nginx/sites-enabled/default-backup
+```
+
+
+sign into file zilla
+
+https://www.digitalocean.com/community/tutorials/how-to-use-filezilla-to-transfer-and-manage-files-securely-on-your-vps
+
+make a backup of nginx config
+
+```{r}
+
+sudo cp /etc/nginx/sites-enabled/default /etc/nginx/sites-enabled/default-backup
+
+
+```
+
+
+
+edit /etc/nginx/sites-enabled/default
+
+add these lines above server{
+
+
+```{r}
+map $http_upgrade $connection_upgrade {
+  default upgrade;
+  ''      close;
+}
+```
+
+change server_name from _ to localhost
+
+add these lines below
+```{r}
+
+add these lines
+
+location /shiny/ {
+  proxy_pass http://127.0.0.1:3838/;
+  proxy_http_version 1.1;
+  proxy_set_header Upgrade $http_upgrade;
+  proxy_set_header Connection $connection_upgrade;
+  rewrite ^(/shiny/[^/]+)$ $1/ permanent;
+}
+
+location /rstudio/ {
+  proxy_pass http://127.0.0.1:8787/;
+  proxy_http_version 1.1;
+  proxy_set_header Upgrade $http_upgrade;
+  proxy_set_header Connection $connection_upgrade;
+}
+```
+
+https://www.digitalocean.com/community/tutorials/how-to-set-up-shiny-server-on-ubuntu-16-04
+
+https://jasperhg90.gitbooks.io/shiny-server-series-the-complete-guide/part-3-ssl.html
+
+ssl encryption
+
+```{r}
+cd /usr/local/sbin
+sudo wget https://dl.eff.org/certbot-auto
+
+
+```
+
+
+
+certbot-auto certonly -a webroot --webroot-path=/var/www/html -d zacgarland.dev -d www.zacgarland.dev

@@ -1,0 +1,81 @@
+---
+title: "Untitled"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: columns
+    vertical_layout: fill
+---
+
+```{r setup, include=FALSE}
+library(flexdashboard)
+```
+
+Page 1 {data-navmenu="Menu A"}
+=====================================
+
+
+Page 2 {data-navmenu="Menu A"}
+=====================================  
+
+
+Page 3 {data-navmenu="Menu B"}
+=====================================
+
+
+Page 4 {data-navmenu="Menu B"}
+=====================================  
+
+
+
+
+
+Column {data-width=650}
+-----------------------------------------------------------------------
+
+### Chart A
+
+```{r}
+
+```
+
+Column {data-width=350}
+-----------------------------------------------------------------------
+
+### Chart B
+
+```{r}
+
+```
+
+### Chart C
+
+```{r}
+
+```
+
+
+
+Page 1
+===================================== 
+
+You can link to a dashboard page with either of the following syntaxes:
+
+[Page 2]
+
+[Page Two](#page-2)
+
+The second syntax is used when you want a custom name for the link 
+(rather than just using the page title).
+
+### Chart A
+    
+```{r}
+```
+
+Page 2
+=====================================     
+
+### Chart B
+    
+```{r}
+```
